@@ -30,6 +30,7 @@ jobs:
           name: Login to AWS ECR
           command: |
             # Authenticate with AWS ECR
+            aws configure
             $(aws ecr get-login --no-include-email --region us-east-1)
 
       - run:
