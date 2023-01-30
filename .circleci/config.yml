@@ -5,38 +5,44 @@ orbs:
   
   # https://circleci.com/developer/orbs/orb/circleci/aws-ecr
   aws-ecr: circleci/aws-ecr@8.2.1
-
 jobs:
-  build:
+  test:
     executor:
-     name: node/default
-     tag: 16.19.0
+      name: node/default
+      tag: 16.19.0
     steps:
-      - checkout
-      - setup_remote_docker:
-          version: 20.10.2
-      - run:
-          name: Build container image
-          command: |
-            # Build the container image
-            ls -lrt /home/circleci/project/
-            cd /home/circleci/project/
-            # docker build -t my-image .
-            # yarn install
-            # yarn tsc
-            DOCKER_BUILDKIT=1 yarn build-image
-
-      - run:
-          name: Login to AWS ECR
-          command: |
-            # Authenticate with AWS ECR
-            docker login -u AWS -p "$(aws ecr get-login-password)" "https://$(aws sts get-caller-identity --query 'Account' --output text).dkr.ecr.us-east-1.amazonaws.com"
-            $(aws ecr get-login --no-include-email --region us-east-1)
-
-      - run:
-          name: Push container image to ECR
-          command: |
-            # Tag the container image and push it to ECR
-            REPOSITORY_URL=$(aws ecr describe-repositories --repository-names my-repository --region us-east-1 | jq -r '.repositories[0].repositoryUri')
-            docker tag my-image:latest $REPOSITORY_URL:latest
-            docker push $REPOSITORY_URL:latest
+    - checkout
+    - setup_remote_docker:
+        version: 20.10.14
+    - run: |
+        # node --version
+        # yarn --version
+        # docker --version
+        # yarn build
+        # yarn install --frozen-lockfile
+        ls -lrt
+        # DOCKER_BUILDKIT=1 yarn workspace backend build-image
+        yarn install
+        #DOCKER_BUILDKIT=1 yarn build-image
+    - node/install-packages:
+        pkg-manager: yarn
+    # - checkout
+    # - run: |
+    #     node --version
+    # - store_artifacts:
+    #     path: /tmp/test-results
+    #     destination: raw-test-output
+    # - store_test_results:
+    #     path: /tmp/test-results
+workflows:
+  node-tests:
+    jobs:
+    - test
+    # Envs: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_ECR_ACCOUNT_URL
+    - aws-ecr/build-and-push-image:
+        repo: backstage-image
+        tag: "latest,v0.1.${CIRCLE_BUILD_NUM}"
+        dockerfile: packages/backend/Dockerfile
+        path: .
+        requires:
+          - test
