@@ -30,8 +30,7 @@ jobs:
           name: Login to AWS ECR
           command: |
             # Authenticate with AWS ECR
-            apk --no-cache add py-pip
-            pip install awscli
+            docker login -u AWS -p "$(aws ecr get-login-password)" "https://$(aws sts get-caller-identity --query 'Account' --output text).dkr.ecr.us-east-1.amazonaws.com"
             $(aws ecr get-login --no-include-email --region us-east-1)
 
       - run:
